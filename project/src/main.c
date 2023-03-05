@@ -153,8 +153,6 @@ static void cdc_task(void)
 int main()
 {
     ModbusErrorInfo err;
-
-    tud_init(BOARD_TUD_RHPORT);
     stdio_usb_init();
 
     gpio_init(GPIO_BUTTON);
@@ -195,7 +193,6 @@ int main()
 
     while (true)
     {
-        tud_task(); // tinyusb device task
         cdc_task();
         RV3028_GetTime(&RTC, &CurrentTime);
     }

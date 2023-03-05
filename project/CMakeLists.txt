@@ -44,7 +44,7 @@ include(${pico-sdk_SOURCE_DIR}/pico_sdk_init.cmake)
 pico_sdk_init()
 
 project(pico-modbus)
-# set(CMAKE_DEBUGGER ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR}/bin/arm-none-eabi-gdb CACHE INTERNAL "debugger")
+set(CMAKE_DEBUGGER ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR}/bin/arm-none-eabi-gdb CACHE INTERNAL "debugger")
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
@@ -64,19 +64,26 @@ target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
     pico_stdlib
-    tinyusb_device_unmarked
+    pico_stdio_usb
     hardware_i2c
 )
 
 add_definitions(
     -DCFG_TUSB_CONFIG_FILE="pico_tusb_config.h"
-    -DLIB_TINYUSB_DEVICE=1
     -DPICO_I2C_SCL_PIN=15
     -DPICO_I2C_SDA_PIN=14
+    -DPICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=-1 # wait in stdio_usb_init until usb is connected
+    -DPICO_STDIO_USB_POST_CONNECT_WAIT_DELAY_MS=1000 # wait 1s AFTER the usb is conected
     )
 
 # enable usb output, disable uart output
-# pico_enable_stdio_uart(${CMAKE_PROJECT_NAME} 1)
+pico_enable_stdio_uart(${CMAKE_PROJECT_NAME} 0)
 pico_enable_stdio_usb(${CMAKE_PROJECT_NAME} 1)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(${CMAKE_PROJECT_NAME})
+
+# exclude stdio_usb_descriptors.c from compilation of pico_stdio_usb lib to use mine instead
+set_source_files_properties(
+    ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb/stdio_usb_descriptors.c
+    TARGET_DIRECTORY ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb
+    PROPERTIES HEADER_FILE_ONLY ON)
