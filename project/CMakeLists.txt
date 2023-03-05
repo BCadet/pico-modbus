@@ -48,7 +48,9 @@ set(CMAKE_DEBUGGER ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR}/bin
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/modbus.c
     ${CMAKE_CURRENT_LIST_DIR}/src/platform.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/rtc.c
     ${CMAKE_CURRENT_LIST_DIR}/src/usb_descriptors.c
     ${rv-3028-c7_SOURCE_DIR}/external/RV3028/RV3028.c
 )
