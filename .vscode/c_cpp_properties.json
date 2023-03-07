@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/project/**",
-                "${workspaceFolder}/build/**"
+                "${workspaceFolder}/build/**",
+                "${workspaceFolder}/build/_deps/**",
             ],
             "defines": [],
             "compileCommands": "${workspaceFolder}/build/compile_commands.json"

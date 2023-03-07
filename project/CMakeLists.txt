@@ -29,7 +29,6 @@ FetchContent_Declare(
     GIT_TAG 1.0
 )
 
-
 FetchContent_MakeAvailable(liblightmodbus)
 FetchContent_MakeAvailable(gcc-arm-none-eabi-10.3-2021.10-x86_64-linux)
 FetchContent_MakeAvailable(RV-3028-C7)
@@ -38,13 +37,15 @@ set(PICO_SDK_PATH ${pico-sdk_SOURCE_DIR})
 set(PICO_TOOLCHAIN_PATH ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR})
 set(CMAKE_BUILD_TYPE "Debug")
 
-# add_library(_pico_sdk_inclusion_marker INTERFACE) # avoid execution of the CMakeLists.txtx of the pico-sdk at MakeAvailable operation
 FetchContent_Populate(pico-sdk)
 include(${pico-sdk_SOURCE_DIR}/pico_sdk_init.cmake)
 pico_sdk_init()
+# find gdb for debugger (pico_sdk_init forget to set it).
+# see build/_deps/pico-sdk-src/cmake/preload/toolchains/pico_arm_gcc.cmake)
+pico_find_compiler(PICO_COMPILER_GDB arm-none-eabi-gdb)
+set(CMAKE_DEBUGGER ${PICO_COMPILER_GDB} CACHE FILEPATH "path to gdb")
 
 project(pico-modbus)
-set(CMAKE_DEBUGGER ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR}/bin/arm-none-eabi-gdb CACHE INTERNAL "debugger")
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
@@ -68,6 +69,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     pico_stdlib
     pico_stdio_usb
     hardware_i2c
+    hardware_pwm
 )
 
 add_definitions(
@@ -81,11 +83,22 @@ add_definitions(
 # enable usb output, disable uart output
 pico_enable_stdio_uart(${CMAKE_PROJECT_NAME} 0)
 pico_enable_stdio_usb(${CMAKE_PROJECT_NAME} 1)
-# create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(${CMAKE_PROJECT_NAME})
+# create uf2 file
+pico_add_uf2_output(${CMAKE_PROJECT_NAME})
+set_property(
+    TARGET ${CMAKE_PROJECT_NAME}
+    APPEND
+    PROPERTY ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.uf2
+)
+set_property(
+    TARGET ${CMAKE_PROJECT_NAME}
+    APPEND
+    PROPERTY ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.elf.map
+)
 
 # exclude stdio_usb_descriptors.c from compilation of pico_stdio_usb lib to use mine instead
 set_source_files_properties(
     ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb/stdio_usb_descriptors.c
     TARGET_DIRECTORY ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb
-    PROPERTIES HEADER_FILE_ONLY ON)
+    PROPERTIES HEADER_FILE_ONLY ON
+)
