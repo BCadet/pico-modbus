@@ -27,6 +27,9 @@
 	"runArgs": ["--privileged"],
 
     // mount the user .ssh folder to the container to allow git fetch/push
-	"mounts": [ "source=${localEnv:HOME}/.ssh,target=/home/builder/.ssh,type=bind" ],
+	"mounts": [ 
+		"source=${localEnv:HOME}/.ssh,target=/home/builder/.ssh,type=bind",
+		"source=/dev,target=/dev,type=bind"
+ 	],
 }
 

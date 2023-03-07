@@ -64,7 +64,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
     ${rv-3028-c7_SOURCE_DIR}/external/RV3028
 )
 
-
 target_link_libraries(${CMAKE_PROJECT_NAME}
     pico_stdlib
     pico_stdio_usb
@@ -77,7 +76,7 @@ add_definitions(
     -DPICO_I2C_SCL_PIN=15
     -DPICO_I2C_SDA_PIN=14
     -DPICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=-1 # wait in stdio_usb_init until usb is connected
-    -DPICO_STDIO_USB_POST_CONNECT_WAIT_DELAY_MS=1000 # wait 1s AFTER the usb is conected
+    # -DPICO_STDIO_USB_POST_CONNECT_WAIT_DELAY_MS=1000 # wait 1s AFTER the usb is conected
     )
 
 # enable usb output, disable uart output
@@ -85,6 +84,7 @@ pico_enable_stdio_uart(${CMAKE_PROJECT_NAME} 0)
 pico_enable_stdio_usb(${CMAKE_PROJECT_NAME} 1)
 # create uf2 file
 pico_add_uf2_output(${CMAKE_PROJECT_NAME})
+# aditionnal cleanup
 set_property(
     TARGET ${CMAKE_PROJECT_NAME}
     APPEND
