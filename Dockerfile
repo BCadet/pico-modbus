@@ -38,15 +38,35 @@ RUN git clone https://github.com/raspberrypi/picotool.git -b ${PICOTOOL_VERSION}
     mkdir build && \
     cd build && \
     PICO_SDK_PATH=/pico-sdk cmake /picotool && \
-    make
+    make && \
+    make install
 
+FROM ubuntu:20.04 as cmake-build-stage
+
+ARG CMAKE_VERSION=3.25
+ARG CMAKE_BUILD=1
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential \
+    libtool \
+    autoconf \
+    libssl-dev
+
+ADD https://cmake.org/files/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}.${CMAKE_BUILD}.tar.gz /
+
+RUN tar xf cmake-${CMAKE_VERSION}.${CMAKE_BUILD}.tar.gz
+
+WORKDIR /cmake-${CMAKE_VERSION}.${CMAKE_BUILD}
+
+RUN ./bootstrap && \
+    make && \
+    make install
 
 FROM ubuntu:20.04
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
     make \
-    cmake \
     git \
     python3 \
     build-essential \
@@ -63,7 +83,10 @@ RUN adduser builder plugdev
 RUN adduser builder dialout
 
 # add openocd to the docker image
-COPY --from=openocd-build-stage /usr/local/bin/openocd /usr/local/bin/openocd
-COPY --from=openocd-build-stage /usr/local/share/openocd /usr/local/share/openocd
+COPY --from=openocd-build-stage /usr/local/bin /usr/local/bin
+COPY --from=openocd-build-stage /usr/local/share /usr/local/share
 
-COPY --from=picotool-build-stage /build/picotool /usr/local/bin/picotool
+COPY --from=picotool-build-stage /usr/local/bin /usr/local/bin
+
+COPY --from=cmake-build-stage /usr/local/bin /usr/local/bin
+COPY --from=cmake-build-stage /usr/local/share /usr/local/share
