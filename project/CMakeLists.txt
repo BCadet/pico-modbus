@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.17)
 # set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # set cmake policy regarding the handling of hard defined options
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
@@ -9,18 +9,24 @@ FetchContent_Declare(
     pico-sdk
     GIT_REPOSITORY  https://github.com/raspberrypi/pico-sdk.git
     GIT_TAG 1.5.0
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+    GIT_SUBMODULES_RECURSE FALSE
 )
 
 FetchContent_Declare(
     liblightmodbus
     GIT_REPOSITORY https://github.com/Jacajack/liblightmodbus.git
     GIT_TAG v3.0
-    GIT_SUBMODULES ""
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+    GIT_SUBMODULES_RECURSE FALSE
 )
 
 FetchContent_Declare(
     gcc-arm-none-eabi-10.3-2021.10-x86_64-linux
     URL https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
+    URL_MD5 2383e4eb4ea23f248d33adc70dc3227e
 )
 
 FetchContent_Declare(
@@ -39,13 +45,14 @@ set(CMAKE_BUILD_TYPE "Debug")
 
 FetchContent_Populate(pico-sdk)
 include(${pico-sdk_SOURCE_DIR}/pico_sdk_init.cmake)
+project(pico-modbus)
+
 pico_sdk_init()
 # find gdb for debugger (pico_sdk_init forget to set it).
 # see build/_deps/pico-sdk-src/cmake/preload/toolchains/pico_arm_gcc.cmake)
 pico_find_compiler(PICO_COMPILER_GDB arm-none-eabi-gdb)
 set(CMAKE_DEBUGGER ${PICO_COMPILER_GDB} CACHE FILEPATH "path to gdb")
 
-project(pico-modbus)
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
@@ -99,6 +106,5 @@ set_property(
 # exclude stdio_usb_descriptors.c from compilation of pico_stdio_usb lib to use mine instead
 set_source_files_properties(
     ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb/stdio_usb_descriptors.c
-    TARGET_DIRECTORY ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb
     PROPERTIES HEADER_FILE_ONLY ON
 )
