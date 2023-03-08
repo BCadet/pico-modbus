@@ -13,6 +13,9 @@ int main()
     gpio_init(GPIO_BUTTON);
     gpio_pull_up(GPIO_BUTTON);
 
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+
     gpio_set_function(28, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(28);
     pwm_config config = pwm_get_default_config();
