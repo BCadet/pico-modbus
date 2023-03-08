@@ -8,4 +8,10 @@
 ModbusSlave* get_modbus_slave(void);
 void modbus_init(void);
 
+struct registerMap
+{
+    uint16_t registers[255];
+    uint8_t WP[255];
+};
+
 #endif

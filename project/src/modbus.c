@@ -6,11 +6,14 @@
 #include "lightmodbus.h"
 
 #include "platform.h"
-#include "rtc.h"
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "modbus.h"
+
 
 static ModbusSlave slave;
+
+struct registerMap map = {0};
 
 ModbusError registerCallback(
     const ModbusSlave *slave,
@@ -24,23 +27,18 @@ ModbusError registerCallback(
     // Pretend to allow all access
     case MODBUS_REGQ_R_CHECK:
     case MODBUS_REGQ_W_CHECK:
-        if(args->index > 9)
+        if(map.WP[args->index])
             result->exceptionCode = MODBUS_EXCEP_ILLEGAL_VALUE;
         else
             result->exceptionCode = MODBUS_EXCEP_NONE;
         break;
 
     case MODBUS_REGQ_R:
-        if(args->index > 0 && args->index < 9)
-            result->value = ((int*)rtc_get_current_time())[args->index-1];
-        else
-            result->value = gpio_get(GPIO_BUTTON);
+        result->value = map.registers[args->index];
         break;
 
     case MODBUS_REGQ_W:
-        if(args->index == 9)
-            gpio_put(PICO_DEFAULT_LED_PIN, args->value);
-
+        map.registers[args->index] = args->value;
     default:
         break;
     }

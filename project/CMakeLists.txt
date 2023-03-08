@@ -76,6 +76,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     pico_stdio_usb
     hardware_i2c
     hardware_pwm
+    pico_bootrom
 )
 
 add_definitions(

@@ -5,6 +5,19 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 #include <stdio.h>
+#include <string.h>
+#include "pico/bootrom.h"
+
+extern struct registerMap map;
+
+void updateRegisterMap(void)
+{
+    map.registers[0] = gpio_get(GPIO_BUTTON);
+    gpio_put(PICO_DEFAULT_LED_PIN, map.registers[1]);
+    pwm_set_gpio_level(28, (uint16_t)(0.05f*(float)map.registers[2] + 3289.0f) );
+    memcpy(&map.registers[3], rtc_get_current_time(), 4);
+    if(map.registers[254] == 42) reset_usb_boot((1<<PICO_DEFAULT_LED_PIN),0);
+}
 
 int main()
 {
@@ -30,7 +43,7 @@ int main()
     {
         platform_modbus_usb_cdc_xfer();
         rtc_update();
-        pwm_set_chan_level(slice_num, 0, 3276 );
+        updateRegisterMap();
     }
     return 0;
 }
