@@ -69,7 +69,6 @@ RUN apt-get update && \
     make \
     git \
     python3 \
-    build-essential \
     libusb-1.0-0-dev \
     texinfo \
     libhidapi-dev \
