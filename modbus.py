@@ -67,11 +67,11 @@ if __name__ == '__main__':
                     log.info(f'{rr.registers}')
         else:
             if args.type is ModbusAccessTypes.coil:
-                rr = client.write_coil(address=args.address, values=args.buffer, slave=args.slave)
+                rr = client.write_coils(address=args.address, values=args.buffer, slave=args.slave)
                 if rr.isError():
                     log.error(f'failed to write')
                 else:
-                    log.info(f'{rr.bits}')
+                    log.info(f'success')
             elif args.type is ModbusAccessTypes.holding:
                 log.info(args.buffer)
                 rr = client.write_registers(address=args.address, values=args.buffer, slave=args.slave)
