@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "tusb.h"
 #include "modbus.h"
+#include "hardware/timer.h"
 
 void platform_rv3028_init(void)
 {
@@ -31,13 +32,63 @@ uint8_t platform_rv3028_write(uint8_t Device_Addr, uint8_t Reg_Addr, const uint8
     return 0;
 }
 
+static char in[256];
+static int idx = 0;
+enum sm 
+{
+    RECEIVING,
+    TIMEOUT,
+} state;
+
+void platform_modbus_alarm(uint alarm_num)
+{
+    if(state == RECEIVING)
+    {
+        add_alarm_in_us(3000, platform_modbus_alarm, NULL, true);
+        state = TIMEOUT;
+    }
+    else
+    {
+        ModbusErrorInfo err = modbusParseRequestRTU(get_modbus_slave(), 0x01, in, idx);
+        if (modbusIsOk(err))
+        {
+            uint16_t length = modbusSlaveGetResponseLength(get_modbus_slave());
+            uint8_t *response = modbusSlaveGetResponse(get_modbus_slave());
+            uint16_t remaining = length;
+            do
+            {
+                uint32_t ret = tud_cdc_n_write(
+                    MODBUS_PORT,
+                    response + (length-remaining),
+                    remaining > CFG_TUD_CDC_TX_BUFSIZE ? CFG_TUD_CDC_TX_BUFSIZE : remaining
+                    );
+                remaining -= ret;
+            } while(remaining);
+            tud_cdc_n_write_flush(MODBUS_PORT);
+        }
+        else
+        {
+            uint8_t source = modbusGetErrorSource(err);
+            uint8_t err_code = modbusGetErrorCode(err);
+            // printf("\r\nErrorSource=%d", source);
+            // printf("\r\nErrorCode=%d", err_code);
+            // printf("\r\nmodbusErrorSourceStr=%s", modbusErrorSourceStr(source));
+            // printf("\r\nmodbusErrorStr=%s", modbusErrorStr(err_code));
+            // printf("\r\ninvalid modbus frame: [");
+            // for(int i=0; i<idx; i++) printf("%.2X", in[i]);
+            // printf(" ]");
+        }
+            memset(in, 0, 256);
+            idx = 0;
+    }
+    
+}
+
 void platform_modbus_usb_cdc_xfer(void)
 {
     uint8_t itf;
     uint32_t count;
-    static char in[256];
-    static int idx = 0;
-    ModbusErrorInfo err;
+
 
     // connected() check for DTR bit
     // Most but not all terminal client set this when making connection
@@ -45,19 +96,10 @@ void platform_modbus_usb_cdc_xfer(void)
     {
         if (tud_cdc_n_available(MODBUS_PORT))
         {
+            state = RECEIVING;
+            add_alarm_in_us(7000, platform_modbus_alarm, NULL, true);
             count = tud_cdc_n_read(MODBUS_PORT, in + idx, 256 - idx);
             idx += count;
-            err = modbusParseRequestRTU(get_modbus_slave(), 0x01, in, idx);
-            if (modbusIsOk(err))
-            {
-                tud_cdc_n_write(
-                    MODBUS_PORT,
-                    modbusSlaveGetResponse(get_modbus_slave()),
-                    modbusSlaveGetResponseLength(get_modbus_slave()));
-                tud_cdc_n_write_flush(MODBUS_PORT);
-                memset(in, 0, 256);
-                idx = 0;
-            }
         }
     }
 }

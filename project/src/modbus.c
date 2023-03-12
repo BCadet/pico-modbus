@@ -20,7 +20,7 @@ ModbusError registerCallback(
     const ModbusRegisterCallbackArgs *args,
     ModbusRegisterCallbackResult *result)
 {
-    printf("\r\nAccess query: %s at index %d", modbusRegisterQueryStr(args->query), args->index);
+    // printf("\r\nAccess query: %s at index %d", modbusRegisterQueryStr(args->query), args->index);
 
     switch (args->query)
     {
