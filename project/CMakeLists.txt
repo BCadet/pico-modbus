@@ -66,9 +66,9 @@ set(PROJECT_SOURCES
 add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES})
 
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
-    ${liblightmodbus_SOURCE_DIR}/include/lightmodbus
+    ${liblightmodbus_SOURCE_DIR}/include/
     ${CMAKE_CURRENT_LIST_DIR}/inc/
-    ${rv-3028-c7_SOURCE_DIR}/external/RV3028
+    ${rv-3028-c7_SOURCE_DIR}/external/
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
