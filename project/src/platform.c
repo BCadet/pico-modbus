@@ -24,7 +24,6 @@ uint8_t platform_rv3028_read(uint8_t Device_Addr, uint8_t Reg_Addr, uint8_t* p_R
     return 0;
 }
 
-
 uint8_t platform_rv3028_write(uint8_t Device_Addr, uint8_t Reg_Addr, const uint8_t* p_Reg_Data, uint32_t Length)
 {
     uint8_t ret = i2c_write_blocking(i2c1, Device_Addr, &Reg_Addr, 1, true);
@@ -32,74 +31,42 @@ uint8_t platform_rv3028_write(uint8_t Device_Addr, uint8_t Reg_Addr, const uint8
     return 0;
 }
 
-static char in[256];
-static int idx = 0;
-enum sm 
+int64_t platform_modbus_alarm(alarm_id_t alarm_num, void *user_data)
 {
-    RECEIVING,
-    TIMEOUT,
-} state;
-
-void platform_modbus_alarm(uint alarm_num)
-{
-    if(state == RECEIVING)
-    {
-        add_alarm_in_us(3000, platform_modbus_alarm, NULL, true);
-        state = TIMEOUT;
-    }
-    else
-    {
-        ModbusErrorInfo err = modbusParseRequestRTU(get_modbus_slave(), 0x01, in, idx);
-        if (modbusIsOk(err))
-        {
-            uint16_t length = modbusSlaveGetResponseLength(get_modbus_slave());
-            uint8_t *response = modbusSlaveGetResponse(get_modbus_slave());
-            uint16_t remaining = length;
-            do
-            {
-                uint32_t ret = tud_cdc_n_write(
-                    MODBUS_PORT,
-                    response + (length-remaining),
-                    remaining > CFG_TUD_CDC_TX_BUFSIZE ? CFG_TUD_CDC_TX_BUFSIZE : remaining
-                    );
-                remaining -= ret;
-            } while(remaining);
-            tud_cdc_n_write_flush(MODBUS_PORT);
-        }
-        else
-        {
-            uint8_t source = modbusGetErrorSource(err);
-            uint8_t err_code = modbusGetErrorCode(err);
-            // printf("\r\nErrorSource=%d", source);
-            // printf("\r\nErrorCode=%d", err_code);
-            // printf("\r\nmodbusErrorSourceStr=%s", modbusErrorSourceStr(source));
-            // printf("\r\nmodbusErrorStr=%s", modbusErrorStr(err_code));
-            // printf("\r\ninvalid modbus frame: [");
-            // for(int i=0; i<idx; i++) printf("%.2X", in[i]);
-            // printf(" ]");
-        }
-            memset(in, 0, 256);
-            idx = 0;
-    }
-    
+    struct modbus *slave = user_data;
+    modbus_flush(slave);
 }
 
-void platform_modbus_usb_cdc_xfer(void)
+uint32_t platform_modbus_read(struct modbus *drv, uint8_t *buf, uint8_t len)
 {
-    uint8_t itf;
-    uint32_t count;
-
-
-    // connected() check for DTR bit
-    // Most but not all terminal client set this when making connection
+    uint32_t count=0;
     if (tud_cdc_n_connected(MODBUS_PORT))
     {
         if (tud_cdc_n_available(MODBUS_PORT))
         {
-            state = RECEIVING;
-            add_alarm_in_us(7000, platform_modbus_alarm, NULL, true);
-            count = tud_cdc_n_read(MODBUS_PORT, in + idx, 256 - idx);
-            idx += count;
+            count = tud_cdc_n_read(MODBUS_PORT, buf, len);
+            if(drv->alarm_id != 0)
+                cancel_alarm(drv->alarm_id);
+            drv->alarm_id = add_alarm_in_ms(10, platform_modbus_alarm, drv, true);
         }
     }
+    return count;
+}
+
+uint32_t platform_modbus_write(struct modbus *drv, const uint8_t * const buf, uint8_t len)
+{
+    uint16_t remaining = len;
+    do
+    {
+        uint32_t ret = tud_cdc_n_write(
+            MODBUS_PORT,
+            buf + (len-remaining),
+            remaining > CFG_TUD_CDC_TX_BUFSIZE ? CFG_TUD_CDC_TX_BUFSIZE : remaining
+            );
+        remaining -= ret;
+    } while(remaining);
+    tud_cdc_n_write_flush(MODBUS_PORT);
+    if(drv->alarm_id != 0)
+        cancel_alarm(drv->alarm_id);
+    return remaining;
 }

@@ -5,15 +5,6 @@ from pymodbus.client import ModbusSerialClient as ModbusClient
 
 
 if __name__ == '__main__':
-    from enum import Enum
-    class ModbusAccessTypes(Enum):
-        coil='coil'
-        holding='holding'
-        input='input'
-
-        def __str__(self):
-            return self.value
-    
     import argparse
     import functools
     parser = argparse.ArgumentParser(
@@ -23,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', help='serial port path', default='/dev/ttyACM0')
     parser.add_argument('-b', '--baud', help='serial port baudrate', type=int, default=115200)
     parser.add_argument('-s', '--slave', help='slave address', type=int, default=0x01)
-    parser.add_argument('type', help='register access type', type=ModbusAccessTypes, choices=list(ModbusAccessTypes), default=ModbusAccessTypes.coil)
+    parser.add_argument('type', help='register access type', type=str, choices=['coil', 'holding', 'input'], default='coil')
     parser.add_argument('-d', '--debug', help='enable debug verbose', action='store_true')
     
     subparsers = parser.add_subparsers(help='type of operation', dest='operation')
@@ -47,13 +38,13 @@ if __name__ == '__main__':
         client.connect()
 
         if args.operation == 'read':
-            if args.type is ModbusAccessTypes.coil:
+            if args.type == 'coil':
                 rr = client.read_coils(address=args.address, count=args.count, slave=args.slave)
                 if rr.isError():
                     log.error(f'failed to read')
                 else:
                     log.info(f'{rr.bits}')
-            elif args.type is ModbusAccessTypes.holding:
+            elif args.type == 'holding':
                 rr = client.read_holding_registers(address=args.address, count=args.count, slave=args.slave)
                 if rr.isError():
                     log.error(f'failed to read')
@@ -66,13 +57,13 @@ if __name__ == '__main__':
                 else:
                     log.info(f'{rr.registers}')
         else:
-            if args.type is ModbusAccessTypes.coil:
+            if args.type == 'coil':
                 rr = client.write_coils(address=args.address, values=args.buffer, slave=args.slave)
                 if rr.isError():
                     log.error(f'failed to write')
                 else:
                     log.info(f'success')
-            elif args.type is ModbusAccessTypes.holding:
+            elif args.type == 'holding':
                 log.info(args.buffer)
                 rr = client.write_registers(address=args.address, values=args.buffer, slave=args.slave)
                 if rr.isError():
