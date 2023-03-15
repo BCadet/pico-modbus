@@ -1,29 +1,38 @@
+#include "hardware/clocks.h"
+#include "hardware/pwm.h"
+#include "modbus.h"
+#include "pico/bootrom.h"
 #include "pico/stdlib.h"
 #include "platform.h"
-#include "rtc.h"
-#include "modbus.h"
-#include "hardware/pwm.h"
-#include "hardware/clocks.h"
 #include <stdio.h>
 #include <string.h>
-#include "pico/bootrom.h"
 
-void updateRegisterMap(struct modbusDevice *device)
+void updateRegisterMap(uint8_t *data)
 {
-    device->registers[0] = gpio_get(GPIO_BUTTON);
-    gpio_put(PICO_DEFAULT_LED_PIN, device->registers[1]);
-    pwm_set_gpio_level(28, (uint16_t)(0.05f*(float)device->registers[2] + 3289.0f) );
-    memcpy(&device->registers[3], rtc_get_current_time(), 4*sizeof(uint32_t));
-    if(device->registers[254] == 42) reset_usb_boot((1<<PICO_DEFAULT_LED_PIN),0);
+    if (gpio_get(GPIO_BUTTON))
+        data[0] |= 0x01;
+    else
+        data[0] &= ~0x01;
+    gpio_put(PICO_DEFAULT_LED_PIN, data[0] & (1 << 1));
+    pwm_set_gpio_level(28, (uint16_t)(0.05f * (float)(*(uint16_t *)&data[2]) + 3289.0f));
+    // if(device->data[254] == 42) reset_usb_boot((1<<PICO_DEFAULT_LED_PIN),0);
 }
 
 int main()
 {
     struct modbusController controller = {0};
     struct modbusDevice device[2] = {0};
+    uint8_t data[4] = {0};
+    uint8_t writeMask[2][4] = {{0xfe, 0xff, 0xff, 0xff}, {0}};
     device[0].address = 0x01;
-    device[0].WP[0] = 1;
+    device[0].data.u8 = &data;
+    device[0].dataLen = 4;
+    device[0].writableMask = &writeMask[0];
     device[1].address = 0x02;
+    device[1].data.u8 = &data;
+    device[1].dataLen = 4;
+    device[1].writableMask = &writeMask[1];
+
     stdio_usb_init();
 
     gpio_init(GPIO_BUTTON);
@@ -42,13 +51,11 @@ int main()
     modbus_add_device(&controller, &device[0]);
     modbus_add_device(&controller, &device[1]);
     modbus_register_platform(&controller, platform_modbus_read, platform_modbus_write);
-    rtc_init();
 
-    while(true)
+    while (true)
     {
         modbus_run(&controller);
-        rtc_update();
-        updateRegisterMap(&device[0]);
+        updateRegisterMap(&data);
     }
     return 0;
 }

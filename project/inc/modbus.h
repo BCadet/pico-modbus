@@ -6,15 +6,20 @@
 #include "lightmodbus/lightmodbus.h"
 
 struct modbusController;
-typedef uint32_t(*platform_modbus_read_fptr)(struct modbusController*, uint8_t*, uint8_t);
-typedef uint32_t(*platform_modbus_write_fptr)(struct modbusController*, const uint8_t* const, uint8_t);
+typedef uint32_t (*platform_modbus_read_fptr)(struct modbusController *, uint8_t *, uint8_t);
+typedef uint32_t (*platform_modbus_write_fptr)(struct modbusController *, const uint8_t *const, uint8_t);
 
 struct modbusDevice
 {
-    uint8_t address;
-    uint16_t registers[255];
-    uint8_t WP[255];
-    struct modbusDevice* next;
+    uint8_t address; // device address on the bus
+    union
+    {
+        uint8_t *u8;   // pointer to raw data
+        uint16_t *u16; // uint16_t pointers (warning: max = dataLen/2 !)
+    } data;
+    uint8_t dataLen;           // length of data accessible in u16 mode !
+    uint8_t *writableMask;     // mask to allow write operation
+    struct modbusDevice *next; // pointer to next device
 };
 
 struct modbusController

@@ -5,11 +5,11 @@
 #define LIGHTMODBUS_DEBUG
 #include "lightmodbus/lightmodbus.h"
 
+#include "modbus.h"
+#include "pico/stdlib.h"
 #include "platform.h"
 #include <stdio.h>
 #include <string.h>
-#include "pico/stdlib.h"
-#include "modbus.h"
 
 ModbusError modbusStaticAllocator(ModbusBuffer *buffer, uint16_t size, void *context)
 {
@@ -18,11 +18,11 @@ ModbusError modbusStaticAllocator(ModbusBuffer *buffer, uint16_t size, void *con
 
     ModbusError retCode = MODBUS_OK;
 
-    if(size != 0) // allocation request
+    if (size != 0) // allocation request
     {
         if (size <= MODBUS_RTU_ADU_MAX && allocated == 0) // Allocation request is within bounds
         {
-            buffer->data = (uint8_t*)&static_buf;
+            buffer->data = (uint8_t *)&static_buf;
             allocated = 1;
         }
         else // Allocation error
@@ -46,38 +46,71 @@ ModbusError registerCallback(
     ModbusRegisterCallbackResult *result)
 {
     struct modbusDevice *device = slave->context;
-    printf("\r\n%#.2x | %-20s | %0.3d | ", device->address, modbusRegisterQueryStr(args->query), args->index);
+    printf("\r\n%.2x | %-23s | %-19s | %0.3d | ", device->address, modbusDataTypeStr(args->type), modbusRegisterQueryStr(args->query), args->index);
 
+    result->exceptionCode = MODBUS_EXCEP_NONE;
+    uint8_t rw = 0;
 
     switch (args->query)
     {
-    // always allow read
     case MODBUS_REGQ_R_CHECK:
-        result->exceptionCode = MODBUS_EXCEP_NONE;
-        printf("OK");
-        break;
-    // allow write if the corresponding WP is 0
     case MODBUS_REGQ_W_CHECK:
-        if(device->WP[args->index])
+        // check if index is valid and
+        // get read/write authorization
+        // 0: RO
+        // 1: RW
+        switch (args->type)
         {
-            result->exceptionCode = MODBUS_EXCEP_ILLEGAL_ADDRESS;
-            printf("KO");
-        }
-        else
-        {
-            result->exceptionCode = MODBUS_EXCEP_NONE;
-            printf("OK");
-        }
-        break;
+        case MODBUS_HOLDING_REGISTER:
+        case MODBUS_INPUT_REGISTER:
+            if (args->index > (device->dataLen>>1)-1)
+            {
+                result->exceptionCode = MODBUS_EXCEP_ILLEGAL_ADDRESS;
+                printf("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_ADDRESS));
+                return MODBUS_OK;
+            }
+            rw = (device->writableMask[args->index] == 0xFF);
+            break;
 
-    case MODBUS_REGQ_R:
-        result->value = device->registers[args->index];
-        printf("%#.4x", result->value);
+        case MODBUS_COIL:
+        case MODBUS_DISCRETE_INPUT:
+            if (args->index > (device->dataLen*8)-1)
+            {
+                result->exceptionCode = MODBUS_EXCEP_ILLEGAL_ADDRESS;
+                printf("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_ADDRESS));
+                return MODBUS_OK;
+            }
+            rw = modbusMaskRead(device->writableMask, args->index);
+            break;
+        }
+        if (rw)
+            printf("RW");
+        else 
+        {
+            printf("RO");
+            if (args->query == MODBUS_REGQ_W_CHECK)
+            {
+                result->exceptionCode = MODBUS_EXCEP_SLAVE_FAILURE;
+                printf(" -> %s", modbusExceptionCodeStr(MODBUS_EXCEP_SLAVE_FAILURE));
+            }
+        }
         break;
 
     case MODBUS_REGQ_W:
-        device->registers[args->index] = args->value;
-        printf("%#.4x", device->registers[args->index]);
+        if (args->type >= MODBUS_COIL)
+            {modbusMaskWrite(device->data.u8, args->index, args->value); printf("%d", args->value);}
+        else
+            {device->data.u16[args->index] = args->value; printf("%.4x", args->value);}
+        
+    break;
+
+    case MODBUS_REGQ_R:
+        if (args->type >= MODBUS_COIL)
+            {result->value = modbusMaskRead(device->data.u8, args->index); printf("%d", result->value);}
+        else
+            {result->value = device->data.u16[args->index]; printf("%.4x", result->value);}
+        break;
+
     default:
         break;
     }
@@ -85,22 +118,16 @@ ModbusError registerCallback(
     return MODBUS_OK;
 }
 
-ModbusError exceptionCallback(const ModbusSlave *slave, uint8_t function, ModbusExceptionCode code)
-{
-    printf("\r\nSlave exception %s (function %d)", modbusExceptionCodeStr(code), function);
-    return MODBUS_OK;
-}
-
 uint8_t modbus_init(struct modbusController *controller)
 {
     // Create a slave
     ModbusErrorInfo err = modbusSlaveInit(
-                                &controller->engine,
-                                registerCallback,
-                                exceptionCallback,
-                                modbusStaticAllocator,
-                                modbusSlaveDefaultFunctions,
-                                modbusSlaveDefaultFunctionCount);
+        &controller->engine,
+        registerCallback,
+        NULL,
+        modbusStaticAllocator,
+        modbusSlaveDefaultFunctions,
+        modbusSlaveDefaultFunctionCount);
     if (modbusIsOk(err))
     {
         return 0;
@@ -111,22 +138,22 @@ uint8_t modbus_init(struct modbusController *controller)
 uint8_t modbus_run(struct modbusController *controller)
 {
     controller->idx += controller->read(controller,
-                                (uint8_t*)(controller->buf + controller->idx),
-                                MODBUS_RTU_ADU_MAX - controller->idx - 1);
+                                        (uint8_t *)(controller->buf + controller->idx),
+                                        MODBUS_RTU_ADU_MAX - controller->idx - 1);
 
     struct modbusDevice *device = controller->slaves;
-    while(device != NULL)
+    while (device != NULL)
     {
         controller->engine.context = device;
         ModbusErrorInfo err = modbusParseRequestRTU(&controller->engine, device->address, controller->buf, controller->idx);
         if (modbusIsOk(err))
         {
             uint16_t length = modbusSlaveGetResponseLength(&controller->engine);
-            const uint8_t * const response = modbusSlaveGetResponse(&controller->engine);
+            const uint8_t *const response = modbusSlaveGetResponse(&controller->engine);
             controller->write(controller, response, length);
             modbus_flush(controller);
         }
-        else if(modbusGetErrorCode(err) == MODBUS_ERROR_CRC) // incomplete frame abort parsing for other addresses
+        else if (modbusGetErrorCode(err) == MODBUS_ERROR_CRC) // incomplete frame abort parsing for other addresses
         {
             break;
         }
@@ -152,10 +179,10 @@ void modbus_add_device(struct modbusController *controller, struct modbusDevice 
 {
     device->next = NULL;
 
-    if(controller->slaves != NULL)
+    if (controller->slaves != NULL)
     {
         struct modbusDevice *last = controller->slaves;
-        while(last->next != NULL)
+        while (last->next != NULL)
             last = last->next;
         last->next = device;
     }

@@ -29,19 +29,12 @@ FetchContent_Declare(
     URL_MD5 2383e4eb4ea23f248d33adc70dc3227e
 )
 
-FetchContent_Declare(
-    RV-3028-C7
-    GIT_REPOSITORY https://github.com/Kampi/RV-3028-C7.git
-    GIT_TAG 1.0
-)
-
 FetchContent_MakeAvailable(liblightmodbus)
 FetchContent_MakeAvailable(gcc-arm-none-eabi-10.3-2021.10-x86_64-linux)
-FetchContent_MakeAvailable(RV-3028-C7)
 
 set(PICO_SDK_PATH ${pico-sdk_SOURCE_DIR})
 set(PICO_TOOLCHAIN_PATH ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR})
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 
 FetchContent_Populate(pico-sdk)
 include(${pico-sdk_SOURCE_DIR}/pico_sdk_init.cmake)
@@ -58,9 +51,7 @@ set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
     ${CMAKE_CURRENT_LIST_DIR}/src/modbus.c
     ${CMAKE_CURRENT_LIST_DIR}/src/platform.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/rtc.c
     ${CMAKE_CURRENT_LIST_DIR}/src/usb_descriptors.c
-    ${rv-3028-c7_SOURCE_DIR}/external/RV3028/RV3028.c
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES})
@@ -68,7 +59,6 @@ add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES})
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
     ${liblightmodbus_SOURCE_DIR}/include/
     ${CMAKE_CURRENT_LIST_DIR}/inc/
-    ${rv-3028-c7_SOURCE_DIR}/external/
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
@@ -101,7 +91,7 @@ set_property(
 set_property(
     TARGET ${CMAKE_PROJECT_NAME}
     APPEND
-    PROPERTY ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.elf.map
+    PROPERTY ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map
 )
 
 # exclude stdio_usb_descriptors.c from compilation of pico_stdio_usb lib to use mine instead
