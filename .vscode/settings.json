@@ -1,3 +1,4 @@
 {
     "terminal.integrated.defaultProfile.linux": "bash",
+    "cortex-debug.variableUseNaturalFormat": false,
 }

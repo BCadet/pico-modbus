@@ -34,7 +34,7 @@ FetchContent_MakeAvailable(gcc-arm-none-eabi-10.3-2021.10-x86_64-linux)
 
 set(PICO_SDK_PATH ${pico-sdk_SOURCE_DIR})
 set(PICO_TOOLCHAIN_PATH ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR})
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Debug")
 
 FetchContent_Populate(pico-sdk)
 include(${pico-sdk_SOURCE_DIR}/pico_sdk_init.cmake)
@@ -48,6 +48,7 @@ set(CMAKE_DEBUGGER ${PICO_COMPILER_GDB} CACHE FILEPATH "path to gdb")
 
 
 set(PROJECT_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/src/gpios.c
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
     ${CMAKE_CURRENT_LIST_DIR}/src/modbus.c
     ${CMAKE_CURRENT_LIST_DIR}/src/platform.c
