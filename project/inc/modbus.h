@@ -11,6 +11,7 @@ typedef uint32_t (*platform_modbus_write_fptr)(struct modbusController *, const 
 
 struct modbusDevice
 {
+    ModbusDataType accessTypeMask;
     uint8_t address; // device address on the bus
     union
     {

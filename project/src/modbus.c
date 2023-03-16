@@ -46,10 +46,17 @@ ModbusError registerCallback(
     ModbusRegisterCallbackResult *result)
 {
     struct modbusDevice *device = slave->context;
-    printf("\r\n%.2x | %-23s | %-19s | %0.3d | ", device->address, modbusDataTypeStr(args->type), modbusRegisterQueryStr(args->query), args->index);
-
     result->exceptionCode = MODBUS_EXCEP_NONE;
     uint8_t rw = 0;
+
+    printf("\r\n%.2x | %-23s | %-19s | %0.3d | ", device->address, modbusDataTypeStr(args->type), modbusRegisterQueryStr(args->query), args->index);
+
+    if(!(device->accessTypeMask & args->type))
+    {
+        result->exceptionCode = MODBUS_EXCEP_ILLEGAL_FUNCTION;
+        printf("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_FUNCTION));
+        return MODBUS_OK;
+    }
 
     switch (args->query)
     {

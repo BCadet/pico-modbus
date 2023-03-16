@@ -25,6 +25,7 @@ int main()
     struct modbusDevice device[2] = {0};
     uint8_t data[12] = {0};
     uint8_t writeMask[2][12] = {{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}, {0}};
+    device[0].accessTypeMask = MODBUS_COIL | MODBUS_DISCRETE_INPUT;
     device[0].address = 0x01;
     device[0].data.u8 = &data;
     device[0].dataLen = sizeof(data);
