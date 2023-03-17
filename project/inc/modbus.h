@@ -5,6 +5,12 @@
 #define LIGHTMODBUS_SLAVE
 #include "lightmodbus/lightmodbus.h"
 
+#ifdef MODBUS_LOG
+#define modbus_log(...) printf(__VA_ARGS__)
+#else
+#define modbus_log(...)
+#endif
+
 struct modbusController;
 typedef uint32_t (*platform_modbus_read_fptr)(struct modbusController *, uint8_t *, uint8_t);
 typedef uint32_t (*platform_modbus_write_fptr)(struct modbusController *, const uint8_t *const, uint8_t);

@@ -100,3 +100,9 @@ set_source_files_properties(
     ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb/stdio_usb_descriptors.c
     PROPERTIES HEADER_FILE_ONLY ON
 )
+
+option(MODBUS_LOG "enable modbus access debug log" False)
+
+if(${MODBUS_LOG})
+    add_definitions("-DMODBUS_LOG")
+endif()

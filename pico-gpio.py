@@ -16,12 +16,11 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug', help='enable debug verbose', action='store_true')
     
     parser.add_argument('gpio', help="gpio", type=int)
-    subparsers = parser.add_subparsers(help='direction', dest='direction')
-    in_parser = subparsers.add_parser("in")
-    out_parser = subparsers.add_parser("out")
-    out_parser.add_argument('value', help='value', type=int) 
-    in_parser.add_argument('pull', help='pull', type=int)
-    
+    subparsers = parser.add_subparsers(help='action', dest='action')
+    get_parser = subparsers.add_parser("get")
+    set_parser = subparsers.add_parser("set")
+    set_parser.add_argument('direction', help='direction', type=str, choices=['in', 'out'])
+    set_parser.add_argument('value', help='value', type=int)
     args = parser.parse_args()
 
     import logging
@@ -30,21 +29,29 @@ if __name__ == '__main__':
     log.setLevel(logging.DEBUG if args.debug else logging.INFO)
     
     with ModbusClient(method='rtu', port=args.port, baudrate=args.baud, timeout=1) as client:
-        # set direction
-        rr = client.write_coil(address=args.gpio, value=True if args.direction == 'out' else False, slave=args.slave)
-        if rr.isError():
-            log.error(f'failed to write direction')
-        else:
-            log.info(f'success')
-        if args.direction == 'out':
-            rr = client.write_coil(address=64+args.gpio, value=args.value, slave=args.slave)
+        
+        if args.action == "set":
+            # set direction
+            rr = client.write_coil(address=args.gpio, value=True if args.direction == 'out' else False, slave=args.slave)
             if rr.isError():
-                log.error(f'failed to write value')
+                log.error(f'failed to write direction')
             else:
                 log.info(f'success')
-        else:
-            rr = client.write_coil(address=32+args.gpio, value=args.pull, slave=args.slave)
-            if rr.isError():
-                log.error(f'failed to write pull')
+            if args.direction == 'out':
+                rr = client.write_coil(address=32+args.gpio, value=args.value, slave=args.slave)
+                if rr.isError():
+                    log.error(f'failed to write value')
+                else:
+                    log.info(f'success')
             else:
-                log.info(f'success')
+                rr = client.write_coil(address=32+args.gpio, value=args.value, slave=args.slave)
+                if rr.isError():
+                    log.error(f'failed to write pull')
+                else:
+                    log.info(f'success')
+        else:
+            rr = client.read_coils(address=32+args.gpio, slave=args.slave)
+            if rr.isError():
+                log.error(f'failed to write direction')
+            else:
+                log.info(f'{rr.bits[0]}')
