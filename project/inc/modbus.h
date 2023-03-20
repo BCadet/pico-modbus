@@ -5,12 +5,22 @@
 #define LIGHTMODBUS_SLAVE
 #include "lightmodbus/lightmodbus.h"
 
+#ifdef MODBUS_LOG
+#define modbus_log(...) printf(__VA_ARGS__)
+#else
+#define modbus_log(...)
+#endif
+
 struct modbusController;
 typedef uint32_t (*platform_modbus_read_fptr)(struct modbusController *, uint8_t *, uint8_t);
 typedef uint32_t (*platform_modbus_write_fptr)(struct modbusController *, const uint8_t *const, uint8_t);
 
+struct modbusDevice;
+typedef void (*deviceHwCallback)(struct modbusDevice *, ModbusRegisterCallbackArgs *, ModbusRegisterCallbackResult *);
+
 struct modbusDevice
 {
+    ModbusDataType accessTypeMask;
     uint8_t address; // device address on the bus
     union
     {
@@ -19,6 +29,7 @@ struct modbusDevice
     } data;
     uint8_t dataLen;           // length of data accessible in u16 mode !
     uint8_t *writableMask;     // mask to allow write operation
+    deviceHwCallback hwCallback;
     struct modbusDevice *next; // pointer to next device
 };
 

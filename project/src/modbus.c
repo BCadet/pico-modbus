@@ -46,15 +46,20 @@ ModbusError registerCallback(
     ModbusRegisterCallbackResult *result)
 {
     struct modbusDevice *device = slave->context;
-    printf("\r\n%.2x | %-23s | %-19s | %0.3d | ", device->address, modbusDataTypeStr(args->type), modbusRegisterQueryStr(args->query), args->index);
+    modbus_log("\r\n%.2x | %-23s | %-19s | %0.3d | ", device->address, modbusDataTypeStr(args->type), modbusRegisterQueryStr(args->query), args->index);
 
     result->exceptionCode = MODBUS_EXCEP_NONE;
     uint8_t rw = 0;
 
-    switch (args->query)
+    if (!(device->accessTypeMask & args->type))
     {
-    case MODBUS_REGQ_R_CHECK:
-    case MODBUS_REGQ_W_CHECK:
+        result->exceptionCode = MODBUS_EXCEP_ILLEGAL_FUNCTION;
+        printf("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_FUNCTION));
+        return MODBUS_OK;
+    }
+
+    if(args->query <= MODBUS_REGQ_W_CHECK) // MODBUS_REGQ_R_CHECK || MODBUS_REGQ_W_CHECK
+    {
         // check if index is valid and
         // get read/write authorization
         // 0: RO
@@ -63,10 +68,10 @@ ModbusError registerCallback(
         {
         case MODBUS_HOLDING_REGISTER:
         case MODBUS_INPUT_REGISTER:
-            if (args->index > (device->dataLen>>1)-1)
+            if (args->index >= (device->dataLen >> 1))
             {
                 result->exceptionCode = MODBUS_EXCEP_ILLEGAL_ADDRESS;
-                printf("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_ADDRESS));
+                modbus_log("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_ADDRESS));
                 return MODBUS_OK;
             }
             rw = (device->writableMask[args->index] == 0xFF);
@@ -74,45 +79,58 @@ ModbusError registerCallback(
 
         case MODBUS_COIL:
         case MODBUS_DISCRETE_INPUT:
-            if (args->index > (device->dataLen*8)-1)
+            if (args->index >= (device->dataLen << 3))
             {
                 result->exceptionCode = MODBUS_EXCEP_ILLEGAL_ADDRESS;
-                printf("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_ADDRESS));
+                modbus_log("%s", modbusExceptionCodeStr(MODBUS_EXCEP_ILLEGAL_ADDRESS));
                 return MODBUS_OK;
             }
             rw = modbusMaskRead(device->writableMask, args->index);
             break;
         }
+
         if (rw)
-            printf("RW");
-        else 
+            modbus_log("RW");
+        else
         {
-            printf("RO");
+            modbus_log("RO");
             if (args->query == MODBUS_REGQ_W_CHECK)
             {
                 result->exceptionCode = MODBUS_EXCEP_SLAVE_FAILURE;
-                printf(" -> %s", modbusExceptionCodeStr(MODBUS_EXCEP_SLAVE_FAILURE));
+                modbus_log(" -> %s", modbusExceptionCodeStr(MODBUS_EXCEP_SLAVE_FAILURE));
             }
         }
-        break;
+    }
+    else // MODBUS_REGQ_W || MODBUS_REGQ_R
+    {
+        if(args->query == MODBUS_REGQ_W)
+            if (args->type >= MODBUS_COIL)
+            {
+                modbusMaskWrite(device->data.u8, args->index, args->value);
+                modbus_log("%d", args->value);
+            }
+            else
+            {
+                device->data.u16[args->index] = args->value;
+                modbus_log("%.4x", args->value);
+            }
 
-    case MODBUS_REGQ_W:
-        if (args->type >= MODBUS_COIL)
-            {modbusMaskWrite(device->data.u8, args->index, args->value); printf("%d", args->value);}
-        else
-            {device->data.u16[args->index] = args->value; printf("%.4x", args->value);}
-        
-    break;
+        if(args->query == MODBUS_REGQ_R)
+            if (args->type >= MODBUS_COIL)
+            {
+                result->value = modbusMaskRead(device->data.u8, args->index);
+                modbus_log("%d", result->value);
+            }
+            else
+            {
+                result->value = device->data.u16[args->index];
+                modbus_log("%.4x", result->value);
+            }
 
-    case MODBUS_REGQ_R:
-        if (args->type >= MODBUS_COIL)
-            {result->value = modbusMaskRead(device->data.u8, args->index); printf("%d", result->value);}
-        else
-            {result->value = device->data.u16[args->index]; printf("%.4x", result->value);}
-        break;
-
-    default:
-        break;
+        if(device->hwCallback != NULL)
+        {
+            device->hwCallback(device, args, result);
+        }
     }
 
     return MODBUS_OK;

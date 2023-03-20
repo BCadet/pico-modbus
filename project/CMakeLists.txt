@@ -34,7 +34,7 @@ FetchContent_MakeAvailable(gcc-arm-none-eabi-10.3-2021.10-x86_64-linux)
 
 set(PICO_SDK_PATH ${pico-sdk_SOURCE_DIR})
 set(PICO_TOOLCHAIN_PATH ${gcc-arm-none-eabi-10.3-2021.10-x86_64-linux_SOURCE_DIR})
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Debug")
 
 FetchContent_Populate(pico-sdk)
 include(${pico-sdk_SOURCE_DIR}/pico_sdk_init.cmake)
@@ -48,6 +48,7 @@ set(CMAKE_DEBUGGER ${PICO_COMPILER_GDB} CACHE FILEPATH "path to gdb")
 
 
 set(PROJECT_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/src/gpios.c
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
     ${CMAKE_CURRENT_LIST_DIR}/src/modbus.c
     ${CMAKE_CURRENT_LIST_DIR}/src/platform.c
@@ -75,6 +76,8 @@ add_definitions(
     -DPICO_I2C_SDA_PIN=14
     -DPICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=-1 # wait in stdio_usb_init until usb is connected
     # -DPICO_STDIO_USB_POST_CONNECT_WAIT_DELAY_MS=1000 # wait 1s AFTER the usb is conected
+    -DMODBUS_LOG=1
+    -DPICO_STDIO_USB_LOW_PRIORITY_IRQ=0x1f
     )
 
 # enable usb output, disable uart output
@@ -99,3 +102,9 @@ set_source_files_properties(
     ${pico-sdk_SOURCE_DIR}/src/rp2_common/pico_stdio_usb/stdio_usb_descriptors.c
     PROPERTIES HEADER_FILE_ONLY ON
 )
+
+option(MODBUS_LOG "enable modbus access debug log" False)
+
+if(${MODBUS_LOG})
+    add_definitions("-DMODBUS_LOG")
+endif()

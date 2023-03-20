@@ -1,3 +1,4 @@
+#include "gpios.h"
 #include "hardware/clocks.h"
 #include "hardware/pwm.h"
 #include "modbus.h"
@@ -7,55 +8,38 @@
 #include <stdio.h>
 #include <string.h>
 
-void updateRegisterMap(uint8_t *data)
-{
-    if (gpio_get(GPIO_BUTTON))
-        data[0] |= 0x01;
-    else
-        data[0] &= ~0x01;
-    gpio_put(PICO_DEFAULT_LED_PIN, data[0] & (1 << 1));
-    pwm_set_gpio_level(28, (uint16_t)(0.05f * (float)(*(uint16_t *)&data[2]) + 3289.0f));
-    // if(device->data[254] == 42) reset_usb_boot((1<<PICO_DEFAULT_LED_PIN),0);
-}
-
 int main()
 {
     struct modbusController controller = {0};
-    struct modbusDevice device[2] = {0};
-    uint8_t data[4] = {0};
-    uint8_t writeMask[2][4] = {{0xfe, 0xff, 0xff, 0xff}, {0}};
-    device[0].address = 0x01;
-    device[0].data.u8 = &data;
-    device[0].dataLen = 4;
-    device[0].writableMask = &writeMask[0];
-    device[1].address = 0x02;
-    device[1].data.u8 = &data;
-    device[1].dataLen = 4;
-    device[1].writableMask = &writeMask[1];
+    struct modbusDevice device = {0};
+    uint8_t data[12] = {0};
+    const uint32_t gpioMask = ~((1<<31) | (1<<30) | (1 << 23) | (1 << 24)); // disable io 23 and 24
+    uint8_t writeMask[12];
+    *(uint32_t*)(writeMask) = gpioMask;
+    *(uint32_t*)(writeMask+4) = gpioMask;
+    *(uint32_t*)(writeMask+8) = gpioMask;
+
+    device.accessTypeMask = MODBUS_COIL | MODBUS_DISCRETE_INPUT;
+    device.address = 0x01;
+    device.data.u8 = data;
+    device.dataLen = sizeof(data);
+    device.writableMask = writeMask;
 
     stdio_usb_init();
 
-    gpio_init(GPIO_BUTTON);
-    gpio_pull_up(GPIO_BUTTON);
-
-    gpio_init(PICO_DEFAULT_LED_PIN);
-    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
-
-    gpio_set_function(28, GPIO_FUNC_PWM);
-    uint slice_num = pwm_gpio_to_slice_num(28);
-    pwm_config config = pwm_get_default_config();
-    pwm_config_set_clkdiv(&config, 38);
-    pwm_init(slice_num, &config, true);
+    gpios_init(gpioMask);
 
     modbus_init(&controller);
-    modbus_add_device(&controller, &device[0]);
-    modbus_add_device(&controller, &device[1]);
+    modbus_add_device(&controller, &device);
     modbus_register_platform(&controller, platform_modbus_read, platform_modbus_write);
 
     while (true)
     {
         modbus_run(&controller);
-        updateRegisterMap(&data);
+        gpios_update(
+            (uint32_t)(*(uint32_t *)data),
+            (uint32_t)(*(uint32_t *)(data+4)),
+            (uint32_t *)(data + 8));
     }
     return 0;
 }

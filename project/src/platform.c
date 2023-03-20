@@ -88,6 +88,7 @@ uint32_t platform_modbus_read(struct modbusController *controller, uint8_t *buf,
 
 uint32_t platform_modbus_write(struct modbusController *controller, const uint8_t * const buf, uint8_t len)
 {
+    irq_set_enabled(PICO_STDIO_USB_LOW_PRIORITY_IRQ, false);
     uint16_t remaining = len;
     do
     {
@@ -98,7 +99,10 @@ uint32_t platform_modbus_write(struct modbusController *controller, const uint8_
             );
         remaining -= ret;
     } while(remaining);
+    tud_task();
     tud_cdc_n_write_flush(MODBUS_PORT);
+    irq_set_enabled(PICO_STDIO_USB_LOW_PRIORITY_IRQ, true);
+    // irq_set_pending(PICO_STDIO_USB_LOW_PRIORITY_IRQ);
     if(controller->alarm_id > 0)
         cancel_alarm(controller->alarm_id);
     return remaining;
