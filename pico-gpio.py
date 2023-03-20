@@ -38,7 +38,7 @@ if __name__ == '__main__':
             else:
                 log.info(f'success')
             if args.direction == 'out':
-                rr = client.write_coil(address=32+args.gpio, value=args.value, slave=args.slave)
+                rr = client.write_coil(address=64+args.gpio, value=args.value, slave=args.slave)
                 if rr.isError():
                     log.error(f'failed to write value')
                 else:
@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 else:
                     log.info(f'success')
         else:
-            rr = client.read_coils(address=32+args.gpio, slave=args.slave)
+            rr = client.read_coils(address=64+args.gpio, slave=args.slave)
             if rr.isError():
                 log.error(f'failed to write direction')
             else:

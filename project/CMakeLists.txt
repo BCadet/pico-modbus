@@ -76,6 +76,8 @@ add_definitions(
     -DPICO_I2C_SDA_PIN=14
     -DPICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=-1 # wait in stdio_usb_init until usb is connected
     # -DPICO_STDIO_USB_POST_CONNECT_WAIT_DELAY_MS=1000 # wait 1s AFTER the usb is conected
+    -DMODBUS_LOG=1
+    -DPICO_STDIO_USB_LOW_PRIORITY_IRQ=0x1f
     )
 
 # enable usb output, disable uart output
