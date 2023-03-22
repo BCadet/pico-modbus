@@ -2,7 +2,7 @@
 #define PLATFORM_H
 #pragma once
 
-#include "modbus.h"
+#include "modbus/modbus.h"
 
 #define MODBUS_PORT 1
 #define GPIO_BUTTON 12

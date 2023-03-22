@@ -1,29 +1,30 @@
 #include "gpios.h"
 #include "hardware/clocks.h"
 #include "hardware/pwm.h"
-#include "modbus.h"
+#include "modbus/modbus.h"
 #include "pico/bootrom.h"
 #include "pico/stdlib.h"
 #include "platform.h"
 #include <stdio.h>
 #include <string.h>
+#include "panduza.h"
 
 int main()
 {
     struct modbusController controller = {0};
     struct modbusDevice device = {0};
-    uint8_t data[12] = {0};
+    pza_gpio_t coil = {0};
     const uint32_t gpioMask = ~((1<<31) | (1<<30) | (1 << 23) | (1 << 24)); // disable io 23 and 24
-    uint8_t writeMask[12];
-    *(uint32_t*)(writeMask) = gpioMask;
-    *(uint32_t*)(writeMask+4) = gpioMask;
-    *(uint32_t*)(writeMask+8) = gpioMask;
+    const pza_gpio_t coilWriteMask = {
+        .gpios.direction = gpioMask,
+        .gpios.pulls = gpioMask,
+        .gpios.values = gpioMask | (1<<31)
+    };
 
-    device.accessTypeMask = MODBUS_COIL | MODBUS_DISCRETE_INPUT;
     device.address = 0x01;
-    device.data.u8 = data;
-    device.dataLen = sizeof(data);
-    device.writableMask = writeMask;
+    modbusDevice_add_coilRegister(&device, coil.reg, sizeof(coil.reg), coilWriteMask.reg);
+    // modbusDevice_add_holdingRegister(&device, holding, sizeof(holding), NULL);
+    device.hwCallback = NULL;
 
     stdio_usb_init();
 
@@ -37,9 +38,11 @@ int main()
     {
         modbus_run(&controller);
         gpios_update(
-            (uint32_t)(*(uint32_t *)data),
-            (uint32_t)(*(uint32_t *)(data+4)),
-            (uint32_t *)(data + 8));
+            coil.gpios.direction,
+            coil.gpios.pulls,
+            &coil.gpios.values);
+        if(coil.reg[11] & (1<<7))
+            reset_usb_boot(0, 1);
     }
     return 0;
 }

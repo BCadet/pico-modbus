@@ -15,21 +15,11 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
-    liblightmodbus
-    GIT_REPOSITORY https://github.com/Jacajack/liblightmodbus.git
-    GIT_TAG v3.0
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS TRUE
-    GIT_SUBMODULES_RECURSE FALSE
-)
-
-FetchContent_Declare(
     gcc-arm-none-eabi-10.3-2021.10-x86_64-linux
     URL https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
     URL_MD5 2383e4eb4ea23f248d33adc70dc3227e
 )
 
-FetchContent_MakeAvailable(liblightmodbus)
 FetchContent_MakeAvailable(gcc-arm-none-eabi-10.3-2021.10-x86_64-linux)
 
 set(PICO_SDK_PATH ${pico-sdk_SOURCE_DIR})
@@ -46,11 +36,11 @@ pico_sdk_init()
 pico_find_compiler(PICO_COMPILER_GDB arm-none-eabi-gdb)
 set(CMAKE_DEBUGGER ${PICO_COMPILER_GDB} CACHE FILEPATH "path to gdb")
 
+add_subdirectory(modbus)
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/gpios.c
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/modbus.c
     ${CMAKE_CURRENT_LIST_DIR}/src/platform.c
     ${CMAKE_CURRENT_LIST_DIR}/src/usb_descriptors.c
 )
@@ -58,7 +48,6 @@ set(PROJECT_SOURCES
 add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES})
 
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
-    ${liblightmodbus_SOURCE_DIR}/include/
     ${CMAKE_CURRENT_LIST_DIR}/inc/
 )
 
@@ -68,16 +57,18 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     hardware_i2c
     hardware_pwm
     pico_bootrom
+    modbus
 )
 
 add_definitions(
     -DCFG_TUSB_CONFIG_FILE="pico_tusb_config.h"
-    -DPICO_I2C_SCL_PIN=15
-    -DPICO_I2C_SDA_PIN=14
     -DPICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=-1 # wait in stdio_usb_init until usb is connected
     # -DPICO_STDIO_USB_POST_CONNECT_WAIT_DELAY_MS=1000 # wait 1s AFTER the usb is conected
-    -DMODBUS_LOG=1
     -DPICO_STDIO_USB_LOW_PRIORITY_IRQ=0x1f
+    -DLIGHTMODBUS_F01S
+    -DLIGHTMODBUS_F02S
+    -DLIGHTMODBUS_F03S
+    -DLIGHTMODBUS_F04S
     )
 
 # enable usb output, disable uart output
@@ -89,12 +80,12 @@ pico_add_uf2_output(${CMAKE_PROJECT_NAME})
 set_property(
     TARGET ${CMAKE_PROJECT_NAME}
     APPEND
-    PROPERTY ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.uf2
-)
-set_property(
-    TARGET ${CMAKE_PROJECT_NAME}
-    APPEND
-    PROPERTY ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map
+    PROPERTY ADDITIONAL_CLEAN_FILES 
+    ${CMAKE_PROJECT_NAME}.bin
+    ${CMAKE_PROJECT_NAME}.dis
+    ${CMAKE_PROJECT_NAME}.elf.map
+    ${CMAKE_PROJECT_NAME}.hex
+    ${CMAKE_PROJECT_NAME}.uf2
 )
 
 # exclude stdio_usb_descriptors.c from compilation of pico_stdio_usb lib to use mine instead
@@ -103,8 +94,3 @@ set_source_files_properties(
     PROPERTIES HEADER_FILE_ONLY ON
 )
 
-option(MODBUS_LOG "enable modbus access debug log" False)
-
-if(${MODBUS_LOG})
-    add_definitions("-DMODBUS_LOG")
-endif()
