@@ -7,23 +7,26 @@
 #include "platform.h"
 #include <stdio.h>
 #include <string.h>
-#include "panduza.h"
+#include "panduza/dio.h"
 
 int main()
 {
-    struct modbusController controller = {0};
-    struct modbusDevice device = {0};
-    pza_gpio_t coil = {0};
-    const uint32_t gpioMask = ~((1<<31) | (1<<30) | (1 << 23) | (1 << 24)); // disable io 23 and 24
-    const pza_gpio_t coilWriteMask = {
+    modbusController_t controller = {0};
+    modbusDevice_t device = {0};
+    const uint32_t gpioMask = ~((1<<31) | (1<<30) | (1<<29) | (1 << 23) | (1 << 24)); // disable io 23 and 24
+    const pza_dio_coil_t coilWriteMask = {
         .gpios.direction = gpioMask,
         .gpios.pulls = gpioMask,
         .gpios.values = gpioMask | (1<<31)
     };
 
-    device.address = 0x01;
-    modbusDevice_add_coilRegister(&device, coil.reg, sizeof(coil.reg), coilWriteMask.reg);
-    // modbusDevice_add_holdingRegister(&device, holding, sizeof(holding), NULL);
+    pza_dio_regs_t dio = {0};
+    pza_dio_init(&dio);
+
+    device.address = dio.id;
+    modbusDevice_add_coilRegister(&device, dio.coils.reg, sizeof(dio.coils.reg), coilWriteMask.reg);
+    modbusDevice_add_inputRegister(&device, dio.identifier.reg, sizeof(dio.identifier.reg));
+    modbusDevice_add_discretInputRegister(&device, dio.inputs.reg, sizeof(dio.inputs.reg));
     device.hwCallback = NULL;
 
     stdio_usb_init();
@@ -37,11 +40,11 @@ int main()
     while (true)
     {
         modbus_run(&controller);
-        gpios_update(
-            coil.gpios.direction,
-            coil.gpios.pulls,
-            &coil.gpios.values);
-        if(coil.reg[11] & (1<<7))
+        dio.inputs.content.inputs = gpios_update(
+            dio.coils.gpios.direction,
+            dio.coils.gpios.pulls,
+            dio.coils.gpios.values);
+        if(dio.coils.reg[11] & (1<<7))
             reset_usb_boot(0, 1);
     }
     return 0;

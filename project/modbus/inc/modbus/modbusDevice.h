@@ -33,7 +33,7 @@ struct modbusDevice
 
 void modbusDevice_add_coilRegister(modbusDevice_t *device, uint8_t *reg, uint8_t length, uint8_t *writeMask);
 void modbusDevice_add_holdingRegister(modbusDevice_t *device, uint8_t *reg, uint8_t length, uint8_t *writeMask);
-void modbusDevice_add_discretInputRegister(modbusDevice_t *device, uint8_t *reg, uint8_t length);
-void modbusDevice_add_inputRegister(modbusDevice_t *device, uint8_t *reg, uint8_t length);
+void modbusDevice_add_discretInputRegister(modbusDevice_t *device, const uint8_t *const reg, uint8_t length);
+void modbusDevice_add_inputRegister(modbusDevice_t *device, const uint8_t * const reg, uint8_t length);
 
 #endif

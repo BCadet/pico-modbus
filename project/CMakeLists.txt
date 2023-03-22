@@ -37,6 +37,7 @@ pico_find_compiler(PICO_COMPILER_GDB arm-none-eabi-gdb)
 set(CMAKE_DEBUGGER ${PICO_COMPILER_GDB} CACHE FILEPATH "path to gdb")
 
 add_subdirectory(modbus)
+add_subdirectory(panduza_dio)
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/gpios.c
@@ -58,6 +59,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     hardware_pwm
     pico_bootrom
     modbus
+    panduza::dio
 )
 
 add_definitions(
