@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', help='serial port path', default='/dev/ttyACM0')
     parser.add_argument('-b', '--baud', help='serial port baudrate', type=int, default=115200)
     parser.add_argument('-s', '--slave', help='slave address', type=int, default=0x01)
-    parser.add_argument('type', help='register access type', type=str, choices=['coil', 'holding', 'input'], default='coil')
+    parser.add_argument('type', help='register access type', type=str, choices=['coil', 'holding', 'input', 'discret'], default='coil')
     parser.add_argument('-d', '--debug', help='enable debug verbose', action='store_true')
     
     subparsers = parser.add_subparsers(help='type of operation', dest='operation')
@@ -50,12 +50,18 @@ if __name__ == '__main__':
                     log.error(f'failed to read')
                 else:
                     log.info(f'{rr.registers}')
-            else:
+            elif args.type == 'input':
                 rr = client.read_input_registers(address=args.address, count=args.count, slave=args.slave)
                 if rr.isError():
                     log.error(f'failed to read')
                 else:
                     log.info(f'{rr.registers}')
+            else:
+                rr = client.read_discrete_inputs(address=args.address, count=args.count, slave=args.slave)
+                if rr.isError():
+                    log.error(f'failed to read')
+                else:
+                    log.info(f'{rr.bits}')
         else:
             if args.type == 'coil':
                 rr = client.write_coils(address=args.address, values=args.buffer, slave=args.slave)
