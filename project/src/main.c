@@ -1,10 +1,5 @@
-#include "gpios.h"
-#include "hardware/clocks.h"
-#include "hardware/pwm.h"
 #include "modbus/modbus.h"
-#include "pico/bootrom.h"
-#include "pico/stdlib.h"
-#include "platform.h"
+#include "connecteurs/modbus.h"
 #include <stdio.h>
 #include <string.h>
 #include "panduza/dio.h"
@@ -12,40 +7,36 @@
 int main()
 {
     modbusController_t controller = {0};
-    modbusDevice_t device = {0};
+    modbusDevice_t dio_device = {0};
     const uint32_t gpioMask = ~((1<<31) | (1<<30) | (1<<29) | (1 << 23) | (1 << 24)); // disable io 23 and 24
-    const pza_dio_coil_t coilWriteMask = {
+    const pza_dio_control_t coilWriteMask = {
         .gpios.direction = gpioMask,
         .gpios.pulls = gpioMask,
         .gpios.values = gpioMask | (1<<31)
     };
 
     pza_dio_regs_t dio = {0};
-    pza_dio_init(&dio);
 
-    device.address = dio.id;
-    modbusDevice_add_coilRegister(&device, dio.coils.reg, sizeof(dio.coils.reg), coilWriteMask.reg);
-    modbusDevice_add_inputRegister(&device, dio.identifier.reg, sizeof(dio.identifier.reg));
-    modbusDevice_add_discretInputRegister(&device, dio.inputs.reg, sizeof(dio.inputs.reg));
-    device.hwCallback = NULL;
+    panduza_platform_init();
 
-    stdio_usb_init();
+    dio_device.address = dio.id;
+    modbusDevice_add_coilRegister(&dio_device, dio.control.reg, sizeof(dio.control.reg), coilWriteMask.reg);
+    modbusDevice_add_inputRegister(&dio_device, dio.identifier.reg, sizeof(dio.identifier.reg));
+    modbusDevice_add_discretInputRegister(&dio_device, dio.inputs.reg, sizeof(dio.inputs.reg));
+    dio_device.hwCallback = NULL;
 
-    gpios_init(gpioMask);
+    pza_dio_init(&dio, gpioMask);
 
     modbus_init(&controller);
-    modbus_add_device(&controller, &device);
+    modbus_add_device(&controller, &dio_device);
     modbus_register_platform(&controller, platform_modbus_read, platform_modbus_write);
 
-    while (true)
+    while (1)
     {
         modbus_run(&controller);
-        dio.inputs.content.inputs = gpios_update(
-            dio.coils.gpios.direction,
-            dio.coils.gpios.pulls,
-            dio.coils.gpios.values);
-        if(dio.coils.reg[11] & (1<<7))
-            reset_usb_boot(0, 1);
+        pza_dio_run(&dio);
+        // if(dio.control.reg[11] & (1<<7))
+        //     reset_usb_boot(0, 1);
     }
     return 0;
 }

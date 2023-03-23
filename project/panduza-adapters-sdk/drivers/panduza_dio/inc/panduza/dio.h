@@ -11,7 +11,7 @@ typedef union {
         uint32_t values;
     } gpios;
     uint8_t reg[12];
-} pza_dio_coil_t;
+} pza_dio_control_t;
 
 typedef union {
     struct {
@@ -30,11 +30,12 @@ typedef union {
 
 typedef struct {
     uint8_t id;
-    pza_dio_coil_t coils;
+    pza_dio_control_t control;
     pza_identifier_t identifier;
     pza_input_t inputs;
 } pza_dio_regs_t;
 
-void pza_dio_init(pza_dio_regs_t *regs);
+void pza_dio_init(pza_dio_regs_t *regs, uint32_t mask);
+void pza_dio_run(pza_dio_regs_t *regs);
 
 #endif 

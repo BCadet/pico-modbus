@@ -2,11 +2,11 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
-#include "hardware/i2c.h"
-#include "platform.h"
 #include "tusb.h"
 #include "modbus/modbus.h"
 #include "hardware/timer.h"
+
+#define MODBUS_PORT 1
 
 int64_t platform_modbus_alarm(alarm_id_t alarm_num, void *user_data)
 {
