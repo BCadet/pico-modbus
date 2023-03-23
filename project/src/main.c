@@ -1,42 +1,28 @@
-#include "modbus/modbus.h"
-#include "connecteurs/modbus.h"
-#include <stdio.h>
-#include <string.h>
 #include "panduza/dio.h"
+#include "panduza/interface.h"
+#include "panduza/platform.h"
+#include "panduza/uart.h"
+#include <stdio.h>
 
 int main()
 {
-    modbusController_t controller = {0};
-    modbusDevice_t dio_device = {0};
-    const uint32_t gpioMask = ~((1<<31) | (1<<30) | (1<<29) | (1 << 23) | (1 << 24)); // disable io 23 and 24
-    const pza_dio_control_t coilWriteMask = {
-        .gpios.direction = gpioMask,
-        .gpios.pulls = gpioMask,
-        .gpios.values = gpioMask | (1<<31)
-    };
+    pza_platform_init();
+    pza_interface_init();
 
-    pza_dio_regs_t dio = {0};
-
-    panduza_platform_init();
-
-    dio_device.address = dio.id;
-    modbusDevice_add_coilRegister(&dio_device, dio.control.reg, sizeof(dio.control.reg), coilWriteMask.reg);
-    modbusDevice_add_inputRegister(&dio_device, dio.identifier.reg, sizeof(dio.identifier.reg));
-    modbusDevice_add_discretInputRegister(&dio_device, dio.inputs.reg, sizeof(dio.inputs.reg));
-    dio_device.hwCallback = NULL;
-
+    // init the panduza dio modbus device and regs + bind
+    pza_dio_t dio = {0};
+    const uint32_t gpioMask = ~((1 << 31) | (1 << 30) | (1 << 29) | (1 << 24) | (1 << 23) | (1 << 1) | (1 << 0)); // disable io 31/30/29/24/23/1/0
     pza_dio_init(&dio, gpioMask);
 
-    modbus_init(&controller);
-    modbus_add_device(&controller, &dio_device);
-    modbus_register_platform(&controller, platform_modbus_read, platform_modbus_write);
+    // init the panduza uart modbus device and regs + bind
+    pza_uart_t uart = {.control.content.baudrate = 115200};
+    pza_uart_init(&uart);
 
     while (1)
     {
-        modbus_run(&controller);
+        pza_interface_run();
         pza_dio_run(&dio);
-        // if(dio.control.reg[11] & (1<<7))
-        //     reset_usb_boot(0, 1);
+        pza_uart_run(&uart);
     }
     return 0;
 }

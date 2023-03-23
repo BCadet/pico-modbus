@@ -1,6 +1,6 @@
 #include <pico/stdlib.h>
 
-uint32_t gpios_update(uint32_t directions, uint32_t pulls, uint32_t values)
+uint32_t pza_platform_dio_update(uint32_t directions, uint32_t pulls, uint32_t values)
 {
     gpio_set_dir_all_bits(directions);
     for(uint8_t i=0; i<30; i++)
@@ -13,7 +13,7 @@ uint32_t gpios_update(uint32_t directions, uint32_t pulls, uint32_t values)
     return gpio_get_all();
 }
 
-void gpios_init(uint32_t mask)
+void pza_platform_dio_init(uint32_t mask)
 {
     gpio_init_mask(mask);
 }

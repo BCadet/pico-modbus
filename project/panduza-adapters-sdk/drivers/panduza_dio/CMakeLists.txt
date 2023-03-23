@@ -7,12 +7,14 @@ target_sources(panduza_dio PRIVATE
 
 target_include_directories(panduza_dio PRIVATE
 ${CMAKE_CURRENT_LIST_DIR}/inc
+${CMAKE_CURRENT_LIST_DIR}/../../platform/inc
+${CMAKE_CURRENT_LIST_DIR}/../../interfaces/inc
 )
 
 target_include_directories(panduza_dio INTERFACE
 ${CMAKE_CURRENT_LIST_DIR}/inc
 )
 
-target_link_libraries(panduza_dio
-    panduza::platform
-)
+# target_link_libraries(panduza_dio
+#     panduza::platform
+# )

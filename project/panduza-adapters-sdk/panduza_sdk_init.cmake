@@ -7,4 +7,4 @@ macro(panduza_sdk_init TARGET)
     panduza_platfrom_init(${TARGET})
 endmacro()
 
-include(${PANDUZA_SDK_PATH}/connecteurs/panduza_connecteurs.cmake)
+include(${PANDUZA_SDK_PATH}/platform/panduza_platform.cmake)

@@ -11,7 +11,6 @@ project(pico-modbus)
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-    ${CMAKE_CURRENT_LIST_DIR}/src/usb_descriptors.c
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES})
@@ -23,7 +22,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
-    panduza::platform
     panduza::interface
     panduza::dio
+    panduza::uart
 )

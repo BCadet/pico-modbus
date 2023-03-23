@@ -4,4 +4,12 @@ endif()
 
 add_subdirectory(${PANDUZA_INTERFACE})
 
-add_library(panduza::interface ALIAS ${PANDUZA_INTERFACE})
+add_library(panduza::interface ALIAS panduza_${PANDUZA_INTERFACE})
+
+target_include_directories(panduza_${PANDUZA_INTERFACE} INTERFACE
+    ${CMAKE_CURRENT_LIST_DIR}/inc
+)
+
+target_link_libraries(panduza_${PANDUZA_INTERFACE} INTERFACE
+    panduza::platform
+)
