@@ -10,6 +10,6 @@ target_include_directories(panduza_${PANDUZA_INTERFACE} INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/inc
 )
 
-target_link_libraries(panduza_${PANDUZA_INTERFACE} INTERFACE
-    panduza::platform
+target_include_directories(panduza_${PANDUZA_INTERFACE} PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/../platform/inc
 )
