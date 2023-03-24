@@ -6,9 +6,13 @@
         {
             "label": "buildTask",
             "type": "shell",
-            "command": "make || read -p \"press enter to close...\"",
+            "command": "cmake ../project && make",
             "options": {
-                "cwd": "${workspaceFolder}/build"
+                "cwd": "${workspaceFolder}/build",
+                "env": {
+                    "CMAKE_BUILD_TYPE":"Debug",
+                    "MODBUS_LOG":"1",
+                }
             },
             "presentation": {
                 "reveal": "always",
