@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 else:
                     log.info(f'success')
         else:
-            rr = client.read_coils(address=64+args.gpio, slave=args.slave)
+            rr = client.read_discrete_inputs(address=args.gpio, slave=args.slave)
             if rr.isError():
                 log.error(f'failed to write direction')
             else:
