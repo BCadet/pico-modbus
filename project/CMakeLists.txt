@@ -4,7 +4,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 set(PANDUZA_PLATFORM "pico")
 set(PANDUZA_INTERFACE "modbus")
-set(PANDUZA_SDK_PATH ${CMAKE_CURRENT_LIST_DIR}/panduza-adapters-sdk)
+
+include(FetchContent)
+FetchContent_Declare(
+    panduza-adapters-sdk
+    GIT_REPOSITORY https://github.com/Panduza/panduza-adapters-sdk.git
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+)
+FetchContent_Populate(panduza-adapters-sdk)
+set(PANDUZA_SDK_PATH ${panduza-adapters-sdk_SOURCE_DIR})
 include(${PANDUZA_SDK_PATH}/panduza_sdk_init.cmake)
 
 project(pico-modbus)
