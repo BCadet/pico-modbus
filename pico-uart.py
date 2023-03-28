@@ -3,6 +3,8 @@
 from pymodbus.client import ModbusSerialClient as ModbusClient
 from pymodbus.exceptions import ModbusException
 
+import sys
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
@@ -17,7 +19,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(help='action', dest='action')
     print_parser = subparsers.add_parser("print")
     read_parser = subparsers.add_parser("read")
-    print_parser.add_argument('string', help='string', type=str, nargs='+')
+    print_parser.add_argument('--string', help='string', type=str)
     read_parser.add_argument('len', help='len', type=int)
     args = parser.parse_args()
 
@@ -29,15 +31,35 @@ if __name__ == '__main__':
     with ModbusClient(method='rtu', port=args.port, baudrate=args.baud, timeout=1) as client:
         
         if args.action == "print":
-            buffer = bytes(' '.join(args.string), 'ascii')
-            rr = client.write_registers(address=5, values=buffer, slave=args.slave)
+            if args.string is not None:
+                string = ' '.join(args.string)
+            else:
+                string = sys.stdin.read()
+            uint16_list = []
+            # Loop through the ASCII string in steps of 2
+            for i in range(0, len(string), 2):
+                # Get the ASCII codes for the two characters
+                code1 = ord(string[i])
+                code2 = ord(string[i+1]) if i+1 < len(string) else 0
+
+                # Concatenate the two uint8 values into a uint16 value
+                uint16_val = (code2 << 8) | code1
+
+                # Add the uint16 value to the list
+                uint16_list.append(uint16_val)
+            rr = client.write_registers(address=3, values=uint16_list, slave=args.slave)
+            rr = client.write_registers(address=2, values=len(uint16_list)<<9, slave=args.slave)
             if rr.isError():
                 log.error(f'{ModbusException(rr)}')
             else:
                 log.info(f'success')
         else:
-            rr = client.read_discrete_inputs(address=args.gpio, slave=args.slave)
-            if rr.isError():
-                log.error(f'failed to write direction')
-            else:
-                log.info(f'{rr.bits[0]}')
+            rr = client.write_registers(address=2, values=args.len, slave=args.slave)
+            ret = args.len
+            while ret != 0:
+                rr = client.read_holding_registers(address=2, count=1, slave=args.slave)
+                if rr.isError():
+                    log.error(f'{ModbusException(rr)}')
+                ret = rr.registers[0] & 0xFF
+            rr = client.read_input_registers(address=3, count=(args.len+1)>>1, slave=args.slave)
+            log.info([hex(reg) for reg in rr.registers])
