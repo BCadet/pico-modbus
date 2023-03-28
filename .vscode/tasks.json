@@ -6,7 +6,7 @@
         {
             "label": "buildTask",
             "type": "shell",
-            "command": "cmake ../project && make",
+            "command": "cmake -DCMAKE_BUILD_TYPE=Debug -DMODBUS_LOG=1 ../project && make",
             "options": {
                 "cwd": "${workspaceFolder}/build",
                 "env": {
