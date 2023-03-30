@@ -16,7 +16,7 @@ class ModbusI2CBUS:
         self.client = client
         self.slave = slave
         self.log = logging.getLogger('ModbusI2CBUS')
-        self.log.setLevel(logging.DEBUG)
+        # self.log.setLevel(logging.DEBUG)
         self.log.debug('init')
         
     def try_lock(self):
@@ -38,7 +38,7 @@ class ModbusI2CBUS:
         end = end if end else len(buffer)
         
         #convert to 16 bits array
-        buffer16 = struct.pack(f"<{end-start+1//2}H", *struct.unpack(f"<{end-start}B", buffer[start:end]))
+        buffer16 = struct.pack(f"<{end-start//2}H", *struct.unpack(f"<{end-start}B", buffer[start:end]))
         self.client.write_registers(0, address, count=1, slave=self.slave)
         self.client.write_registers(3, buffer16, count=len(buffer16), slave=self.slave)
         self.client.write_registers(1, end-start, count=1, slave=self.slave)
@@ -46,17 +46,19 @@ class ModbusI2CBUS:
     def readfrom_into(self, address, buffer, *, start=0, end=None, stop=True):
         """Read data from an address and into the buffer"""
         self.log.debug(f'readfrom_into  {address=} {buffer=} {start=} {end=}')
+        self.log.debug(f'{len(buffer)=}')
         end = end if end else len(buffer)
         self.client.write_registers(0, address, count=1, slave=self.slave)
         self.client.write_registers(2, end-start, count=1, slave=self.slave)
-        count = (end-start)//2 if (end-start)//2 else 1
+        count = (end-start)//2
         result = self.client.read_input_registers(3, count=count+1, slave=self.slave)
         if result.isError():
             self.log.error(result)
             raise Exception
         else:
-            buffer[start:end] = struct.pack(f"<{len(result.registers)}H", *result.registers)
-        self.log.debug(f'{buffer=}')
+            buff = struct.pack(f"<{len(result.registers)}H", *result.registers)
+            buffer[start:] = buff[:-start]
+
 
     # pylint: disable=unused-argument
     def writeto_then_readfrom(
@@ -77,7 +79,7 @@ class ModbusI2CBUS:
         self.log.debug('writeto_then_readfrom')
         out_end = out_end if out_end else len(buffer_out)
         in_end = in_end if in_end else len(buffer_in)
-        result = self.writeto(address, buffer_out, start=out_start, end=out_end)
+        self.writeto(address, buffer_out, start=out_start, end=out_end)
         self.readfrom_into(address, buffer_in, start=in_start, end=in_end)
 
 
@@ -99,19 +101,25 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     import logging
-    logging.basicConfig(format="[%(asctime)s] %(name)15s [%(levelname)8s] --- %(message)s")
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format="[%(asctime)s] %(name)15s [%(levelname)8s] --- %(message)s"
+    )
     log = logging.getLogger(__file__)
-    log.setLevel(logging.DEBUG if args.debug else logging.INFO)
+    # log.setLevel(logging.DEBUG if args.debug else logging.INFO)
     
     with ModbusClient(method='rtu', port=args.port, baudrate=args.baud, timeout=1) as client:
         i2c = ModbusI2CBUS(client, args.slave)
         rtc = adafruit_pcf8523.PCF8523(i2c)
-        rtc.datetime = time.struct_time((2017,1,9,15,6,0,0,9,-1))
-        try:
-            while True:
-                t = rtc.datetime
-                print(t)
-                print(t.tm_hour, t.tm_min)
-        except KeyboardInterrupt:
-            exit()
+        t = time.struct_time((2023,3,30,15,6,1,1,9,-1))
+        print(t)
+        rtc.datetime = t
+        print(rtc.datetime)
+        # try:
+        #     while True:
+        #         t = rtc.datetime
+        #         print(t)
+        #         # print(t.tm_hour, t.tm_min)
+        # except KeyboardInterrupt:
+        #     exit()
                 
