@@ -8,7 +8,7 @@ int main()
     pza_platform_init();
     pza_interface_init();
 
-    pza_i2c_t i2c;
+    pza_i2c_t i2c = {0};
     pza_i2c_init(&i2c);
 
     while (1)
