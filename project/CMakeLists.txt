@@ -9,7 +9,7 @@ include(FetchContent)
 FetchContent_Declare(
     panduza-adapters-sdk
     GIT_REPOSITORY https://github.com/Panduza/panduza-adapters-sdk.git
-    GIT_TAG main
+    GIT_TAG add-i2c
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
 )
