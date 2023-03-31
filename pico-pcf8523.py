@@ -38,9 +38,13 @@ class ModbusI2CBUS:
         end = end if end else len(buffer)
         
         #convert to 16 bits array
-        buffer16 = struct.pack(f"<{end-start//2}H", *struct.unpack(f"<{end-start}B", buffer[start:end]))
+        buff = buffer
+        if len(buff)%2 == 1:
+            buff += b'\x00'
+        array = struct.unpack(f"<{len(buff)}B", buff)
+        buff16 = [v1 | (v2 << 8) for v1, v2 in zip(array[::2], array[1::2])]
         self.client.write_registers(0, address, count=1, slave=self.slave)
-        self.client.write_registers(3, buffer16, count=len(buffer16), slave=self.slave)
+        self.client.write_registers(3, buff16, count=len(buff16), slave=self.slave)
         self.client.write_registers(1, end-start, count=1, slave=self.slave)
 
     def readfrom_into(self, address, buffer, *, start=0, end=None, stop=True):
@@ -111,15 +115,16 @@ if __name__ == '__main__':
     with ModbusClient(method='rtu', port=args.port, baudrate=args.baud, timeout=1) as client:
         i2c = ModbusI2CBUS(client, args.slave)
         rtc = adafruit_pcf8523.PCF8523(i2c)
-        t = time.struct_time((2023,3,30,15,6,1,1,9,-1))
-        print(t)
-        rtc.datetime = t
-        print(rtc.datetime)
-        # try:
-        #     while True:
-        #         t = rtc.datetime
-        #         print(t)
-        #         # print(t.tm_hour, t.tm_min)
-        # except KeyboardInterrupt:
-        #     exit()
+        # t = time.struct_time((2023,3,30,15,6,1,1,9,-1))
+        # print(t)
+        # rtc.datetime = t
+        # print(rtc.datetime)
+        try:
+            while True:
+                # rtc.datetime = t
+                print(rtc.datetime)
+                time.sleep(1)
+                # print(t.tm_hour, t.tm_min)
+        except KeyboardInterrupt:
+            exit()
                 
